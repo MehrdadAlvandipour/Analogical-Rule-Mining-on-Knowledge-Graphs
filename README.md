@@ -10,7 +10,7 @@ git clone --single-branch --branch OpenKE-Tensorflow1.0 https://github.com/thunl
 ```
 
 3. Compile OpenKE c++ files:  
-```bash
+```shell
 cd OpenKE  
 bash make.sh
 ```
