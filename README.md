@@ -2,7 +2,7 @@
 Enrich KB's with /similar_to links for better rule mining
 
 1. git clone this repo.
-2. Then inside it's folder, clone the tensorflow branch of OpenKE with the following command:
+2. Then inside it's folder, clone the tensorflow branch of OpenKE:
 
 ```shell
 cd Analogical-Rule-Mining-on-Knowledge-Graphs   
