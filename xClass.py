@@ -5,6 +5,8 @@ import time
 import re
 import shutil
 from shutil import copyfile
+import shlex,subprocess
+
 
 import numpy as np
 import pandas as pd
@@ -458,16 +460,15 @@ class xSimilarity(dict):
     """
     with open(path, 'r') as f:
       f_contents = f.readlines()
-        
-    f_contents = f_contents[13:-3]
-      
+    f_contents = f_contents[13:]
     with open(path, 'w') as f:
       for line in f_contents:
-        if re.search(r'countPairs', line):
+        if max(pattern in line for pattern in ['Mining done', 'Total time', 'rules mined', 'countPairs']):  #re.search(r'Mining done', line):
           continue
         else:
-          f.write(line)
-    #print('Rules at %s file cleaned.' % path)
+          if not (line == '\n'):
+            f.write(line)
+    print('Rules at %s file cleaned.' % path)
 
   def eval_frame(self, file, test_len):
       
@@ -530,7 +531,7 @@ class xSimilarity(dict):
                         f' {eval_add}')
 
 
-    self.run_AMIE_and_backup_rules(AMIE_plus,Apply_AMIE_RULES,test_add,rules_add)
+    self.run_AMIE_and_backup_rules(AMIE_plus,Apply_AMIE_RULES,test_add,rules_add,eval_add)
 
 
 
@@ -555,15 +556,18 @@ class xSimilarity(dict):
                           f' {train_add} {test_add} {valid_add}'
                           f' {eval_add}')
 
-      self.run_AMIE_and_backup_rules(AMIE_plus,Apply_AMIE_RULES,test_add,rules_add)
+      self.run_AMIE_and_backup_rules(AMIE_plus,Apply_AMIE_RULES,test_add,rules_add,eval_add)
 
 
-  def run_AMIE_and_backup_rules(self,AMIE_plus,Apply_AMIE_RULES,test_add,rules_add):
+  def run_AMIE_and_backup_rules(self,AMIE_plus,Apply_AMIE_RULES,test_add,rules_add,eval_add):
     
     print('running AMIE_plus')
-    (return_code, std_out_err) = xUtils.run_proc(AMIE_plus)
-    if return_code != 0:
-      print('AMIE_plus failed with output: ' + std_out_err)
+    rule_file = open(rules_add,'w')
+    AMIE_proc = subprocess.run(AMIE_plus,stdout=rule_file, stderr=subprocess.DEVNULL,shell=True)
+    time.sleep(1)
+    rule_file.close()
+    if AMIE_proc.returncode != 0:
+      print(f'AMIE_plus failed. Check errors in {rules_add}')
       return
 
     copyfile(rules_add,rules_add+'.backup')
@@ -571,9 +575,12 @@ class xSimilarity(dict):
     time.sleep(1)
 
     print('running Apply_AMIE_RULES')
-    (return_code, std_out_err) = xUtils.run_proc(Apply_AMIE_RULES)
-    if return_code != 0:
-      print('Apply_AMIE_RULES failed with output: ' + std_out_err)
+    eval_file = open(eval_add,'w')
+    AMIE_proc = subprocess.run(Apply_AMIE_RULES,stdout=eval_file, stderr=subprocess.STDOUT,shell=True)
+    time.sleep(1)
+    eval_file.close()
+    if AMIE_proc.returncode != 0:
+      print(f'Apply_AMIE_RULES failed. Check errors in {eval_add}')
       return
 
     test_size = xUtils.file_len(test_add)
