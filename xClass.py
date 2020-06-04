@@ -530,7 +530,7 @@ class xSimilarity(dict):
                         f' {eval_add}')
 
 
-    self.run_AMIE_and_backup_rules(AMIE_plus,Apply_AMIE_RULES,test_add)
+    self.run_AMIE_and_backup_rules(AMIE_plus,Apply_AMIE_RULES,test_add,rules_add)
 
 
 
@@ -555,10 +555,10 @@ class xSimilarity(dict):
                           f' {train_add} {test_add} {valid_add}'
                           f' {eval_add}')
 
-      self.run_AMIE_and_backup_rules(AMIE_plus,Apply_AMIE_RULES,test_add)
+      self.run_AMIE_and_backup_rules(AMIE_plus,Apply_AMIE_RULES,test_add,rules_add)
 
 
-  def run_AMIE_and_backup_rules(self,AMIE_plus,Apply_AMIE_RULES,test_add):
+  def run_AMIE_and_backup_rules(self,AMIE_plus,Apply_AMIE_RULES,test_add,rules_add):
     
     print('running AMIE_plus')
     (return_code, std_out_err) = xUtils.run_proc(AMIE_plus)
