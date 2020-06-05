@@ -256,6 +256,7 @@ class xSimilarity(dict):
 
     dst = os.path.join(self['backup'],filename)
     copyfile(src,dst)
+    print('Backup saved at: ', dst)
 
 
 
@@ -436,7 +437,7 @@ class xSimilarity(dict):
       df.to_csv(dest, mode='a', header=False,index=False, sep='\t')
       return new_name
 
-### note: works only on distmult
+
   def best_scores(self,df,percent, asc=1):
     """filters the input <df> based on its 'score' column, 
     keeping only top <percent>."""
