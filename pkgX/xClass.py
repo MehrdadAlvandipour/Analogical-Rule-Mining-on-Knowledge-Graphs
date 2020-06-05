@@ -431,25 +431,91 @@ class xSimilarity(dict):
       return new_name
 
 ### note: works only on distmult
-  def top_scores(self,df,percent):
+  def best_scores(self,df,percent, asc=1):
     """filters the input <df> based on its 'score' column, 
     keeping only top <percent>."""
     if percent > 1:
       percent = percent / 100
     if percent ==1:
       return df
+    
     crop_index = int(percent*len(df))
-    df_filtered = df.iloc[np.argpartition(df['score'],crop_index)[:crop_index+1]]
+    if asc == 1:
+      df_filtered = df.iloc[np.argpartition(df['score'],crop_index)[:crop_index]]
+    elif asc == -1:
+      crop_index = -1 * crop_index
+      df_filtered = df.iloc[np.argpartition(df['score'],crop_index)[crop_index:]]
     return df_filtered
 
-  def filter_and_append(self,df,percent):
-    suffix = 'dist_' + str(percent) + 'p_'
-    new_df = self.top_scores(df,percent)
+  def filter_and_append(self,df,percent, method):
+    method_options = {'distMult','cosD','Sub'}
+    if method not in method_options:
+      print('method argument must be one of: ', method_options)
+      raise
+    suffix = f'{method}_' + str(percent) + 'p_'
+    if method == 'distMult':
+      new_df = self.best_scores(df,percent)
+    else:
+      new_df = self.best_scores(df,percent,asc=-1)
     enriched_file = self.append_train(new_df,suffix)
     self['enriched_files'].append(enriched_file)
 
  
 
+
+
+
+ ## Subject Similarity '-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~'
+
+  def subj_scores(self):
+    ent_total = self['benchmarks_dict'][self.current_dataset]['ent_total']    # From the first line of ent2id.txt
+    training_file = os.path.join(self.training_data_path, 'train2id.txt') 
+    s = [ [] for _ in range(ent_total)] # A list of lists(sets). Will contain all sets S_{e_i}.
+
+
+    # Create the sets
+    f = open(training_file,'r')
+    num_lines = int(f.readline())    # First line of train2id is the number of triplets
+    assert num_lines == self['benchmarks_dict'][self.current_dataset]['train_size']
+    for i in trange(num_lines):
+      l = f.readline()
+      l = l.split()
+      try:
+        s[int(l[0])] += [ ( int(l[1]) , int(l[2]) ) ]
+      except:
+        print("something went wrong at triple" + str(i))
+        raise
+    f.close()
+
+
+    # Compute the scores
+    h = []
+    t = []
+    sc = []
+    with tqdm(total=int(ent_total*(ent_total-1)/2)) as pbar:
+      for i,j in combinations(range(ent_total),2):
+        score = len( set(s[i]) & set(s[j]) )
+        if score:
+          h.append(i)
+          t.append(j)
+          sc.append(score)
+        pbar.update(1)
+
+    
+
+    d = {'head':h , 'tail':t, 'score': sc}
+    df = pd.DataFrame(data=d)
+
+    # We only keep a df with the same size as the training
+    df = df.iloc[np.argpartition(df['score'],-num_lines)[-num_lines:]]
+
+    file = os.path.join( self['root'], f'Sub_{self.current_dataset}.npz')
+    np.savez(file, head=df['head'], tail=df['tail'], score=df['score'])
+    print('\n Dataframe saved at: ' + file)
+    self.backup_file(file)
+    
+
+    return df
 
 
  ## AMIE '-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~'
