@@ -132,10 +132,17 @@ class xSimilarity(dict):
     return self._current_dataset  
   @current_dataset.setter
   def current_dataset(self,new_value):
+    '''Set the current dataset and manage the related attributes.
+    Other attributes include: training_data_path, base_data_path, openKE_installed
+
+    '''
+    if (not self.openKE_installed) and os.path.isdir(self['openKE']):
+      self.openKE_installed = True
 
     if new_value not in os.listdir(self['local_datasets']) and new_value not in self['benchmarks_dict']:
       print(new_value + ' does not exists anywhere')
       return
+
     self._current_dataset = new_value 
     self._base_data_path =  os.path.join(self['local_datasets'],self.current_dataset)
     self._load_enriched_files()
@@ -190,12 +197,13 @@ class xSimilarity(dict):
      
     os.chdir(self['root'])
     if source == 'git':
+      print('Installing from gitHub')
       cmd = "git clone -b OpenKE-PyTorch https://github.com/thunlp/OpenKE"
-      (_,std_out_err) = xUtils.run_proc(cmd)
-      print(std_out_err)
+      os.system(cmd)
     else:
       src = os.path.join(self['backup'],'OpenKE')
       dst = os.path.join(self['root'],'OpenKE')
+      print('Copying from ' + src)
       shutil.copytree(src,dst)
     
 
@@ -204,13 +212,11 @@ class xSimilarity(dict):
     print(return_code)
     if return_code == 0:
       self.openKE_installed = True
-      print('Successfuly installed OpenKE.' 
-            ' See benchmarks info at key->benchmarks_dict')
+      print('Successfuly installed OpenKE.')
       self._create_benchmarks_dict()
     else:
-      print("Something went wrong.\n"
-      "The following is the instalation command that failed")
-      print(install_cmd)  
+      print("Something went wrong.")
+      raise
   
   
   
@@ -452,13 +458,19 @@ class xSimilarity(dict):
     if method not in method_options:
       print('method argument must be one of: ', method_options)
       raise
-    suffix = f'{method}_' + str(percent) + 'p_'
+    
+    # Filter based on the method.
     if method == 'distMult':
       new_df = self.best_scores(df,percent)
     else:
       new_df = self.best_scores(df,percent,asc=-1)
-    enriched_file = self.append_train(new_df,suffix)
-    self['enriched_files'].append(enriched_file)
+    
+    # append to training file with a suffix
+    suffix = f'{method}_' + str(percent) + 'p_'
+    enriched_file_name = self.append_train(new_df,suffix)
+
+    # Keep track of enriched files
+    self['enriched_files'].append(enriched_file_name)
 
  
 

@@ -22,6 +22,6 @@ def run_proc(cmd,real_time_output = False, cwd=None):
 		    print(l)
 		print(p.stdout.read())
 	else:
-		p = subprocess.run(args,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd, text=True)
+		p = subprocess.run(args,stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd)
 
 	return (p.returncode,p.stdout)
