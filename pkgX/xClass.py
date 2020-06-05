@@ -467,7 +467,7 @@ class xSimilarity(dict):
 
  ## Subject Similarity '-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~'
 
-  def subj_scores(self):
+  def sub_scores(self):
     ent_total = self['benchmarks_dict'][self.current_dataset]['ent_total']    # From the first line of ent2id.txt
     training_file = os.path.join(self.training_data_path, 'train2id.txt') 
     s = [ [] for _ in range(ent_total)] # A list of lists(sets). Will contain all sets S_{e_i}.
