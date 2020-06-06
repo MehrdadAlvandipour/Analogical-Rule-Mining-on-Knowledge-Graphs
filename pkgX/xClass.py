@@ -330,6 +330,67 @@ class xSimilarity(dict):
     self.openke_objects['tester'] = Tester(model = self.openke_objects['distmult'], data_loader = self.openke_objects['test_dataloader'], use_gpu = True)
     
 
+  def cosD_scores(self):
+    tester = self.openke_objects['tester']
+    ent_total = self['benchmarks_dict'][self.current_dataset]['ent_total']
+    
+    import torch
+    indices = torch.cuda.LongTensor(range(ent_total))
+    ents = tester.model.ent_embeddings(indices)
+    ents_mag = torch.norm(ents,dim=1)
+    ents_normalized = torch.div(ents,ents_mag.view((ent_total,1)))
+
+    
+
+    chunk_size =  2**11  
+    tot = ent_total * (ent_total - 1)/2
+    step_total = np.ceil(tot/chunk_size)
+    print( 'Total steps: ' + str(step_total))
+
+    h_t_pairs = combinations(range(ent_total),2)
+    all_scores = np.empty([int(step_total),int(chunk_size)])
+
+    for c in trange(int(step_total)):
+      p = itertools.islice(h_t_pairs,0,chunk_size)
+      h,t = zip(*list(p))
+      h = np.array(h)
+      t= np.array(t)
+
+      ent_h = ents_normalized[h]
+      ent_t = ents_normalized[t]
+      res = torch.sum(torch.mul(ent_h,ent_t),1)
+
+      try:
+        all_scores[c,:] = res.cpu().data.numpy()
+      except ValueError: # Last batch may not be full size
+        _ = res.cpu().data.numpy()
+        all_scores[c,:_.size] = _
+
+    all_scores = all_scores.reshape(-1)[:int(tot)]
+
+    # We only keep top k scores where k is the training size of the benchmark.
+    train_size = self['benchmarks_dict'][self.current_dataset]['train_size']
+    
+    # higher is better for cosine score, so partition and keep from the end.
+    crop_at = -train_size 
+    ind = np.argpartition(all_scores,crop_at)[crop_at:]
+    all_scores = all_scores[ind]
+
+    # Keep the h,t pairs corresponding to ind
+    sel = np.zeros(int(tot))
+    sel[ind] = 1
+    tab =  itertools.compress(combinations(range(ent_total),2) , sel)
+    h,t = zip(*list(tab))
+
+    file = os.path.join( x['root'], f'cosD_{self.current_dataset}.npz')
+    np.savez(file, head=h, tail=t, score=all_scores)
+    print('\n Scores saved at: ' + file)
+
+    self.backup_file(file)
+
+    df = pd.DataFrame(data={'head':h, 'tail':t, 'score': all_scores})
+    return df
+
   def dist_avg_scores(self):
     '''Note:
     Requires openKE tester object at: self.openke_objects['tester'] 
@@ -384,7 +445,7 @@ class xSimilarity(dict):
 
     file = os.path.join( self['root'], f'dist_{self.current_dataset}.npz')
     np.savez(file, head=h, tail=t, score=all_scores)
-    print('\n Dataframe saved at: ' + file)
+    print('\n Scores saved at: ' + file)
     self.backup_file(file)
 
     df = pd.DataFrame(data={'head':h, 'tail':t, 'score': all_scores})
