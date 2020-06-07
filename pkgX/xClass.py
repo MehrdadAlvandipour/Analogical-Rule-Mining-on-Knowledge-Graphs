@@ -39,6 +39,7 @@ class xSimilarity(dict):
     self._current_dataset = ''
     self._training_data_path = ''
     self._base_data_path = ''
+    self._method = ''
 
     self._checkpoint_file = ''
     self._ckpt_logfile = ''
@@ -102,13 +103,35 @@ class xSimilarity(dict):
   def _load_enriched_files(self):
     self['enriched_files'] = []
     for file in os.listdir(self.base_data_path):
-      if ('train_' in file):
+      if ('train_'+self.method in file):
         self['enriched_files'].append(file)
      
 
 
 
 # Dynamic properties '--------------------'  
+
+  @property
+  def method(self):
+    return self._method
+
+  @method.setter
+  def method(self,new_value):
+    method_options = {0: 'Sub', 1: 'distMult', 2: 'cosD'}
+    if isinstance(new_value,int):
+      self._method = method_options[new_value]
+    else:
+      ops_lower = ['sub','distmult','cosd']
+      if new_value.lower() in ops_lower:
+        self._method = method_options[ops_lower.index(new_value.lower())]
+      else:
+        self._method = ''
+    self._load_enriched_files()
+    print(self._method)
+
+  
+
+
   @property
   def openKE_installed(self):
     return self._openKE_installed
@@ -443,7 +466,7 @@ class xSimilarity(dict):
     tab =  itertools.compress(combinations(range(ent_total),2) , sel)
     h,t = zip(*list(tab))
 
-    file = os.path.join( self['root'], f'dist_{self.current_dataset}.npz')
+    file = os.path.join( self['root'], f'distMult_{self.current_dataset}.npz')
     np.savez(file, head=h, tail=t, score=all_scores)
     print('\n Scores saved at: ' + file)
     self.backup_file(file)
@@ -452,10 +475,10 @@ class xSimilarity(dict):
     return df
 
 
-  def load_from_npz(self,file=None):
-    if file==None:
-      file = os.path.join( self['root'], f'dist_{self.current_dataset}.npz')
-    data = np.load(file)
+  def load_from_npz(self,file_path=None):
+    if file_path==None:
+      file_path = os.path.join( self['root'], f'dist_{self.current_dataset}.npz')
+    data = np.load(file_path)
     h = data['head']
     t = data['tail']
     score = data['score']
@@ -515,7 +538,12 @@ class xSimilarity(dict):
       df_filtered = df.iloc[np.argpartition(df['score'],crop_index)[crop_index:]]
     return df_filtered
 
-  def filter_and_append(self,df,percent, method):
+  def filter_and_append(self,df,percent, method=None):
+    '''
+    method_options: {'distMult','cosD','Sub'}
+    '''
+    if method == None:
+      method = self.method
     method_options = {'distMult','cosD','Sub'}
     if method not in method_options:
       print('method argument must be one of: ', method_options)
