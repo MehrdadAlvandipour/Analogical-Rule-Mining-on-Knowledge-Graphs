@@ -405,7 +405,7 @@ class xSimilarity(dict):
     tab =  itertools.compress(combinations(range(ent_total),2) , sel)
     h,t = zip(*list(tab))
 
-    file = os.path.join( x['root'], f'cosD_{self.current_dataset}.npz')
+    file = os.path.join( self['root'], f'cosD_{self.current_dataset}.npz')
     np.savez(file, head=h, tail=t, score=all_scores)
     print('\n Scores saved at: ' + file)
 
