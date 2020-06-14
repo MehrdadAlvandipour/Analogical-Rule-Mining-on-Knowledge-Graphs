@@ -671,15 +671,132 @@ class xSimilarity(dict):
               tailpreds = tailpreds[1].split('\t')
               tailpreds.pop()
 
+              if (head_target in headpreds[:10]):
+                hits+=1
 
-              if (head_target in headpreds) and (tail_target in tailpreds):
-                  if (len(headpreds) < 10) and (len(tailpreds) < 10):
-                      hits+=1
+              if (tail_target in tailpreds[:10]):
+                hits+=1
+
+              # if (head_target in headpreds[:10]) or (tail_target in tailpreds[:10]):
+              #   hits+=1
+
+              # if (head_target in headpreds) and (tail_target in tailpreds):
+              #     if (len(headpreds) < 10) and (len(tailpreds) < 10):
+              #         hits+=1
           else:
               print('miss')
               raise 
                   
-      return hits/(test_len)
+      return hits/(2*test_len)
+
+  def AMIE_plus(self,train_file_path,max_heap_size=16,fconst=False,maxad=3,minhc = 0.01, mins=100, minis=100):
+    train_add =  train_file_path
+    train_file_name = train_add[train_add.rfind('/')+1:]
+    base_path = train_add[:train_add.rfind('/')]
+    rules_folder = os.path.join(base_path,'rules') 
+    if not os.path.exists( rules_folder ):
+      os.mkdir(rules_folder)
+
+    if fconst:
+      rules_add = os.path.join(rules_folder,'const_'+train_file_name)
+    else:
+      rules_add = os.path.join(rules_folder,'nonConst_'+train_file_name)
+    #eval_add = os.path.join(self['evaluation'],f"{self.current_dataset}_baseline_rules_eval.txt")
+
+    AMIE_local_location = os.path.join(self['root'],"AMIE")
+    if fconst:
+      AMIE_plus = (f"java -XX:-UseGCOverheadLimit -Xmx{max_heap_size}g -jar {AMIE_local_location}/amie_plus.jar "
+      f"-fconst -maxad {maxad} -minhc {minhc} -mins {mins} -minis {minis} " 
+      f"{train_add} > {rules_add}")
+    else:
+      AMIE_plus = (f"java -XX:-UseGCOverheadLimit -Xmx{max_heap_size}g -jar {AMIE_local_location}/amie_plus.jar "
+      f"-maxad {maxad} -minhc {minhc} -mins {mins} -minis {minis} " 
+      f"{train_add} > {rules_add}")
+
+    #print(AMIE_plus)
+    print('running AMIE_plus')
+    rule_file = open(rules_add,'w')
+    AMIE_proc = subprocess.run(AMIE_plus,stdout=rule_file, stderr=subprocess.DEVNULL,shell=True)
+    time.sleep(1)
+    rule_file.close()
+    if AMIE_proc.returncode != 0:
+      print(f'AMIE_plus failed. Check errors in {rules_add}')
+      return
+
+    # copyfile(rules_add,rules_add+'.backup')
+    self.clean_amie_output(rules_add)
+    time.sleep(1)
+
+    return rules_add
+    #self.run_AMIE_and_backup_rules(AMIE_plus,Apply_AMIE_RULES,test_add,rules_add,eval_add)
+
+  def merge_rule_files(self,file1,file2, new_file_add):
+    file = open(new_file_add,'w')
+    proc = subprocess.run(f'cat {file1} {file2}',stdout=file, stderr=subprocess.STDOUT, shell=True)
+    time.sleep(1)
+    file.close()
+
+    if proc.returncode != 0:
+      print(f'merge failed. Check errors in {eval_add}')
+      return
+
+    #return new_file_add
+
+  def Apply_AMIE_RULES(self,train_add,rules_add):
+    base_path = train_add[:train_add.rfind('/')]
+    test_add = os.path.join(base_path,'test.txt')
+    valid_add = os.path.join(base_path,'valid.txt')
+    eval_add = rules_add[:-4] + '_eval.txt'
+
+    AMIE_local_location = os.path.join(self['root'],"AMIE")
+    Apply_AMIE_RULES = (f'java -jar {AMIE_local_location}/ApplyAMIERules.jar {rules_add}' 
+                        f' {train_add} {test_add} {valid_add}'
+                        f' {eval_add}')
+
+    print('running Apply_AMIE_RULES')
+    eval_file = open(eval_add,'w')
+    AMIE_proc = subprocess.run(Apply_AMIE_RULES,stdout=eval_file, stderr=subprocess.STDOUT,shell=True)
+    time.sleep(1)
+    eval_file.close()
+    if AMIE_proc.returncode != 0:
+      print(f'Apply_AMIE_RULES failed. Check errors in {eval_add}')
+      return
+
+    return eval_add
+
+  def AMIE_mine_baseline2(self):
+    train_add = os.path.join(self.base_data_path,'train.txt')
+    rules_add = os.path.join(self.base_data_path,'rules','rules_train.txt')
+    test_add = os.path.join(self.base_data_path,'test.txt')
+    #valid_add = os.path.join(self.base_data_path,'valid.txt')
+    f1 = self.AMIE_plus(train_add,minhc=0.00,mins=0,minis=0)
+    f2 = self.AMIE_plus(train_add,fconst=True, maxad=2,mins=0,minis=0)
+
+    self.merge_rule_files(f1,f2,rules_add)
+
+    eval_add = self.Apply_AMIE_RULES(train_add,rules_add)
+
+    test_size = xUtils.file_len(test_add)
+    print(eval_add)
+    print('Hits@10: ' + str(self.eval_frame(eval_add, test_size)))
+
+  def AMIE_mine_erniched2(self):
+    for enriched_file in self['enriched_files']:
+      train_add =  os.path.join(self.base_data_path,enriched_file)
+      rules_add = os.path.join(self.base_data_path,'rules','rules_'+enriched_file)
+      test_add = os.path.join(self.base_data_path,'test.txt')
+      #valid_add = os.path.join(self.base_data_path,'valid.txt')
+      f1 = self.AMIE_plus(train_add,minhc=0.00,mins=0,minis=0)
+      f2 = self.AMIE_plus(train_add,fconst=True, maxad=2,mins=0,minis=0)
+
+      self.merge_rule_files(f1,f2,rules_add)
+
+      eval_add = self.Apply_AMIE_RULES(train_add,rules_add)
+
+      test_size = xUtils.file_len(test_add)
+      print(eval_add)
+      print('Hits@10: ' + str(self.eval_frame(eval_add, test_size)))
+
 
   def AMIE_mine_baseline(self,max_heap_size=16,minhc = 0.25, mins=50, minis=0):
     train_add =  os.path.join(self.base_data_path,'train.txt')
