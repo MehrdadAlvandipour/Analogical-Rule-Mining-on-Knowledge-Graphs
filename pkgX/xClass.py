@@ -689,7 +689,7 @@ class xSimilarity(dict):
                   
       return hits/(2*test_len)
 
-  def AMIE_plus(self,train_file_path,max_heap_size=16,fconst=False,maxad=3,minhc = 0.01, mins=100, minis=100):
+  def AMIE_plus(self,train_file_path,max_heap_size=64,fconst=False,maxad=3,minhc = 0.01, mins=100, minis=100):
     train_add =  train_file_path
     train_file_name = train_add[train_add.rfind('/')+1:]
     base_path = train_add[:train_add.rfind('/')]
@@ -780,7 +780,7 @@ class xSimilarity(dict):
     print(eval_add)
     print('Hits@10: ' + str(self.eval_frame(eval_add, test_size)))
 
-  def AMIE_mine_erniched2(self):
+  def AMIE_mine_enriched2(self):
     for enriched_file in self['enriched_files']:
       train_add =  os.path.join(self.base_data_path,enriched_file)
       rules_add = os.path.join(self.base_data_path,'rules','rules_'+enriched_file)
