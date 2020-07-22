@@ -488,7 +488,7 @@ class xSimilarity(dict):
     
  ## Filtering df '-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~'
 
-  def append_train(self,input_df,method_name):
+  def append_train(self,input_df,method_name,translate=True):
       """ Appends the input data frame to a copy of train.txt.
       
       input_df: --pd.DataFrame: has two columns 'head', and 'tail' containing
@@ -508,11 +508,15 @@ class xSimilarity(dict):
       tails = list(input_df['tail']) 
 
       # Translate int ids to /mid
-      ents = pd.read_csv(os.path.join(self.training_data_path,"entity2id.txt"),sep = '\t',header=None, skiprows=[0],usecols=[0]) # first row is lineTot
-      heads_mid = list(ents.iloc[heads,0]) 
-      rels_mid = ['/similar_to']*len(heads)
-      tails_mid = list(ents.iloc[tails,0]) 
+      if translate:
+        ents = pd.read_csv(os.path.join(self.training_data_path,"entity2id.txt"),sep = '\t',header=None, skiprows=[0],usecols=[0]) # first row is lineTot
+        heads_mid = list(ents.iloc[heads,0]) 
+        tails_mid = list(ents.iloc[tails,0]) 
+      else:
+        heads_mid = heads 
+        tails_mid = tails
 
+      rels_mid = ['/similar_to']*len(heads)
       d = {'head': heads_mid , 'relation': rels_mid, 'tail':tails_mid}
       df = pd.DataFrame(data=d)
 
@@ -544,7 +548,7 @@ class xSimilarity(dict):
     '''
     if method == None:
       method = self.method
-    method_options = {'distMult','cosD','Sub'}
+    method_options = {'distMult','cosD','Sub','w2v'}
     if method not in method_options:
       print('method argument must be one of: ', method_options)
       raise
@@ -557,7 +561,10 @@ class xSimilarity(dict):
     
     # append to training file with a suffix
     suffix = f'{method}_' + str(percent) + 'p_'
-    enriched_file_name = self.append_train(new_df,suffix)
+    if method=='w2v':
+      enriched_file_name = self.append_train(new_df,suffix,translate=False)
+    else:
+      enriched_file_name = self.append_train(new_df,suffix)
 
     # Keep track of enriched files
     self['enriched_files'].append(enriched_file_name)
