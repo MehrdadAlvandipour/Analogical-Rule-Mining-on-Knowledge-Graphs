@@ -1,7 +1,6 @@
 # Analogical-Rule-Mining-on-Knowledge-Graphs
-Enrich KB's with /similar_to links for better rule mining
 
-This is the first attempt at Analogical Reasoning (AR) on Knowledge Graphs (KG).
+This is our first attempt at Analogical Reasoning (AR) on Knowledge Graphs (KG).
 Here we experimented with enriching the KG with *similar_to* links b/w entities and then mine rules with out-of-the box rule mining systems (e.g AMIE+). To quantify similarity b/w entities, we employed graph embedding models (e.g. DistMult) or natural language models(e.g. word2vec) to obtain vector representations for the graph and then used similarity based functions to generate score for entity pairs. We also experimented with a discrete notion of similarity as our last method which seeks to capture similarity b/w pairs while paying attention to their role (i.e. subject vs object).
 
 The adopted datasets for our experiments were FB15K, FB15K237, and WN18RR. Each dataset was enriched with progressive levels of similarity links to understand the effect of enrichment levels and avoid saturation. These enrichment levels, denoted by $\sigma$ were chosen as a percentage of the size of the test sets for each benchmark (recent experiments used $\sigma =$ %5, %10, %15, %20, %50, and %100).
